@@ -1,0 +1,7 @@
+FROM lithopscloud/ibmcf-python-v38
+
+RUN pip install --no-cache-dir \
+    matplotlib \
+    torch \
+    torchvision \
+    numpy
