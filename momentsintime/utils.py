@@ -3,6 +3,8 @@ import os
 import re
 import subprocess
 import numpy as np
+import uuid
+import shutil
 from PIL import Image
 import cv2
 import tempfile
@@ -10,16 +12,23 @@ import tempfile
 
 def extract_frames(video_file, num_frames=8):
     """Return a list of PIL image frames uniformly sampled from an mp4 video."""
+    print(video_file)
+    video = open(video_file, 'rb')
+
+    tmp_video_key = os.path.join(tempfile.gettempdir(), uuid.uuid4().hex + '.mp4')
+    with open(tmp_video_key, 'wb') as tmp_video_file:
+        tmp_video_file.write(video.read())
+    
+    video.close()
+
     folder = next(tempfile._get_candidate_names())
     os.mkdir(folder)
-    output = subprocess.Popen(['ffmpeg', '-i', video_file],
-                              stderr=subprocess.PIPE).communicate()
+    output = subprocess.Popen(['ffmpeg', '-i', video_file], stderr=subprocess.PIPE).communicate()
     # Search and parse 'Duration: 00:05:24.13,' from ffmpeg stderr.
     re_duration = re.compile(r'Duration: (.*?)\.')
     duration = re_duration.search(str(output[1])).groups()[0]
 
-    seconds = functools.reduce(lambda x, y: x * 60 + y,
-                               map(int, duration.split(':')))
+    seconds = functools.reduce(lambda x, y: x * 60 + y, map(int, duration.split(':')))
     rate = num_frames / float(seconds)
 
     output = subprocess.Popen(['ffmpeg', '-i', video_file,
@@ -27,10 +36,13 @@ def extract_frames(video_file, num_frames=8):
                                '-vframes', str(num_frames),
                                '-loglevel', 'panic',
                                folder+'/%d.jpg']).communicate()
+    
     frame_paths = sorted([os.path.join(folder, frame)
                           for frame in os.listdir(folder)])
+    
     frames = load_frames(frame_paths, num_frames=num_frames)
-    subprocess.call(['rm', '-rf', folder])
+    shutil.rmtree(folder)
+    os.remove(tmp_video_key)
     return frames
 
 

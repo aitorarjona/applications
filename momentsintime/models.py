@@ -42,13 +42,13 @@ def modify_resnets(model):
 weight_url = 'http://moments.csail.mit.edu/moments_models/moments_RGB_resnet50_imagenetpretrained.pth.tar'
 
 
-def load_model(weight_file=None):
+def load_model(model_location):
     """Load pretrained resnet50 model."""
-
     model = resnet50(num_classes=339)
 
     # Load checkpoint
-    checkpoint = torch.load(weight_file, map_location=lambda storage, loc: storage)  # Load on cpu
+    with open(model_location, 'rb') as weight_file:
+        checkpoint = torch.load(weight_file, map_location=lambda storage, loc: storage)  # Load on cpu
     state_dict = {str.replace(str(k), 'module.', ''): v for k, v in checkpoint['state_dict'].items()}
     model.load_state_dict(state_dict)
     model = modify_resnets(model)
